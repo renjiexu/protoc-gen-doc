@@ -7,13 +7,15 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
-	"github.com/renjiexu/protoc-gen-doc/extensions"
 	"github.com/pseudomuto/protokit"
+	"github.com/renjiexu/protoc-gen-doc/extensions"
 )
 
 // Template is a type for encapsulating all the parsed files, messages, fields, enums, services, extensions, etc. into
 // an object that will be supplied to a go template.
 type Template struct {
+	// Title
+	Title string `json:"title"`
 	// The files that were parsed
 	Files []*File `json:"files"`
 	// Details about the scalar values and their respective types in supported languages.
@@ -23,6 +25,7 @@ type Template struct {
 // NewTemplate creates a Template object from a set of descriptors.
 func NewTemplate(descs []*protokit.FileDescriptor) *Template {
 	files := make([]*File, 0, len(descs))
+	fileNames := make([]string, 0, len(descs))
 
 	for _, f := range descs {
 		file := &File{
@@ -72,10 +75,16 @@ func NewTemplate(descs []*protokit.FileDescriptor) *Template {
 		sort.Sort(file.Messages)
 		sort.Sort(file.Services)
 
+		fileNames = append(fileNames, fileNameOnly(f.GetName()))
 		files = append(files, file)
 	}
 
-	return &Template{Files: files, Scalars: makeScalars()}
+	return &Template{Title: strings.Join(fileNames, " | "), Files: files, Scalars: makeScalars()}
+}
+
+func fileNameOnly(name string) string {
+	tokens := strings.Split(name, "/")
+	return strings.Replace(tokens[len(tokens) - 1], ".proto", "", 1)
 }
 
 func makeScalars() []*ScalarValue {
